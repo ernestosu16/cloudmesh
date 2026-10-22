@@ -65,7 +65,7 @@ You only need **Docker** (with Docker Compose). Go, Node and pnpm all run inside
 1. Clone the repository and create `.env` from the example:
 
    ```bash
-   git clone https://github.com/ernestosu16/cloud-mesh.git cloudmesh
+   git clone https://github.com/ernestosu16/cloudmesh.git cloudmesh
    ```
 
    ```bash
