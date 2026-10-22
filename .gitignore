@@ -1,0 +1,32 @@
+# Go
+/bin/
+/tmp/
+/cloudmesh
+*.test
+*.out
+coverage.*
+
+# Frontend
+node_modules/
+web/dist/*
+!web/dist/.gitkeep
+web/.vite/
+web/.tanstack/
+# Caché de pnpm; la parte ya versionada entró por error en 362c9fdf
+web/.pnpm-store/
+
+# Datos locales
+/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Editor / SO
+.DS_Store
+.idea/
+.vscode/

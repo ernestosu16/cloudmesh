@@ -1,0 +1,170 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: 'Space Grotesk Variable', var(--font-sans);
+    --font-sans: 'Inter Variable', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+    --color-success: var(--success);
+    --color-success-soft: var(--success-soft);
+    --color-warning: var(--warning);
+    --color-warning-soft: var(--warning-soft);
+    --color-ink: var(--ink);
+    --color-ink-foreground: var(--ink-foreground);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    --background: #f5f6f8;
+    --foreground: #0f1720;
+    --card: #ffffff;
+    --card-foreground: #0f1720;
+    --popover: #ffffff;
+    --popover-foreground: #0f1720;
+    --primary: #2a4bd7;
+    --primary-foreground: #ffffff;
+    --secondary: #f0f2f5;
+    --secondary-foreground: #2b3440;
+    --muted: #f0f2f5;
+    --muted-foreground: #5b6573;
+    --accent: #e8ecfc;
+    --accent-foreground: #1c35a3;
+    --destructive: #b42318;
+    --border: #e3e6eb;
+    --input: #c9d0da;
+    --ring: #2a4bd7;
+    --success: #14632b;
+    --success-soft: #e6f4ea;
+    --warning: #8a3d06;
+    --warning-soft: #fdf1e4;
+    --ink: #0f1720;
+    --ink-foreground: #ffffff;
+    --chart-1: #2a4bd7;
+    --chart-2: #0f766e;
+    --chart-3: #7c3aed;
+    --chart-4: #c2410c;
+    --chart-5: #0f6cbd;
+    --radius: 0.75rem;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #2b3440;
+    --sidebar-primary: #2a4bd7;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e8ecfc;
+    --sidebar-accent-foreground: #1c35a3;
+    --sidebar-border: #e3e6eb;
+    --sidebar-ring: #2a4bd7;
+}
+
+.dark {
+    color-scheme: dark;
+    --background: #0b1118;
+    --foreground: #e9edf2;
+    --card: #161f2b;
+    --card-foreground: #e9edf2;
+    --popover: #161f2b;
+    --popover-foreground: #e9edf2;
+    --primary: #6f8bff;
+    --primary-foreground: #0b1118;
+    --secondary: #1f2a38;
+    --secondary-foreground: #dce3ec;
+    --muted: #1f2a38;
+    --muted-foreground: #9aa6b6;
+    --accent: #1e2a52;
+    --accent-foreground: #b8c6ff;
+    --destructive: #ff8a80;
+    --border: #263243;
+    --input: #33415a;
+    --ring: #6f8bff;
+    --success: #6fdc9a;
+    --success-soft: #12301f;
+    --warning: #ffb877;
+    --warning-soft: #3a2410;
+    --ink: #17233a;
+    --ink-foreground: #e9edf2;
+    --chart-1: #6f8bff;
+    --chart-2: #2dd4bf;
+    --chart-3: #a78bfa;
+    --chart-4: #fb923c;
+    --chart-5: #60a5fa;
+    --sidebar: #111821;
+    --sidebar-foreground: #dce3ec;
+    --sidebar-primary: #6f8bff;
+    --sidebar-primary-foreground: #0b1118;
+    --sidebar-accent: #1e2a52;
+    --sidebar-accent-foreground: #b8c6ff;
+    --sidebar-border: #263243;
+    --sidebar-ring: #6f8bff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    /* Nombres largos sin espacios (archivos, correos, rutas) parten línea en vez de desbordar. */
+    @apply bg-background text-foreground wrap-break-word;
+    }
+  html {
+    /* Sin zoom por doble toque; pellizcar para ampliar sigue funcionando. */
+    @apply font-sans touch-manipulation;
+    }
+  h1, h2, h3 {
+    @apply font-heading tracking-tight;
+    }
+}
+
+/*
+ * iOS amplía la página al enfocar un campo con letra de menos de 16px. En
+ * pantallas táctiles todo campo de texto usa 16px, aunque una clase pida menos.
+ * Fuera de @layer para ganar a las utilidades de Tailwind.
+ */
+@media (pointer: coarse) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

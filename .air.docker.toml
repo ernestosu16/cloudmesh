@@ -1,0 +1,17 @@
+# air dentro de Docker: los eventos de fichero no siempre cruzan el bind mount,
+# así que se usa sondeo.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/cloudmesh ./cmd/cloudmesh"
+  bin = "./tmp/cloudmesh"
+  args_bin = ["serve"]
+  include_ext = ["go", "sql"]
+  exclude_dir = ["web", "tmp", "data", "bin", "docker"]
+  delay = 500
+  poll = true
+  poll_interval = 500
+
+[log]
+  time = false

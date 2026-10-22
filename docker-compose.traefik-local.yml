@@ -1,0 +1,33 @@
+# Reproduce en local el frente de Dokploy: Traefik v3 delante de la imagen de producción.
+# Sirve para probar subidas grandes y lentas a través del proxy.
+#   docker compose -f docker-compose.dokploy.yml -f docker-compose.traefik-local.yml --env-file .env up --build
+# Con TRAEFIK_READ_TIMEOUT sin definir se usa el valor por defecto de Traefik v3 (60s),
+# que corta cualquier subida que tarde más de un minuto. Dokploy hereda ese defecto.
+services:
+  app:
+    environment:
+      # Solo para esta prueba local: proveedor fake dentro de la imagen de producción.
+      CLOUDMESH_DEV_FAKE_PROVIDER: ${CLOUDMESH_DEV_FAKE_PROVIDER:-0}
+    networks:
+      dokploy-network: null
+  traefik:
+    image: traefik:v3.6
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --entrypoints.web.address=:8080
+      - --entrypoints.web.transport.respondingTimeouts.readTimeout=${TRAEFIK_READ_TIMEOUT:-60s}
+      - --entrypoints.web.transport.respondingTimeouts.writeTimeout=${TRAEFIK_WRITE_TIMEOUT:-0s}
+      - --log.level=INFO
+    volumes:
+      - ./docker/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    ports:
+      - "${CLOUDMESH_PROXY_PORT:-18081}:8080"
+    networks:
+      - dokploy-network
+    depends_on:
+      - app
+
+networks:
+  dokploy-network:
+    external: false
+    name: cloudmesh_local_edge

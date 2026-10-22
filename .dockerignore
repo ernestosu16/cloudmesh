@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+!.env.example
+data/
+bin/
+tmp/
+web/node_modules
+web/dist
+web/.vite
+**/*.db
+**/*.db-wal
+**/*.db-shm
+.DS_Store

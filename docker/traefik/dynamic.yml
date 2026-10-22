@@ -1,0 +1,12 @@
+# Enrutado de prueba: todo el tráfico del entrypoint web va a la app por su alias.
+http:
+  routers:
+    cloudmesh:
+      rule: "PathPrefix(`/`)"
+      entryPoints: [web]
+      service: cloudmesh
+  services:
+    cloudmesh:
+      loadBalancer:
+        servers:
+          - url: "http://cloudmesh-app:8080"

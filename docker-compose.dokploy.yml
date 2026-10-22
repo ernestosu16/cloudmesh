@@ -1,0 +1,55 @@
+# Producción en Dokploy (tipo Compose). Traefik de Dokploy pone HTTPS y dominio.
+# Sin `ports`: el dominio se asigna en la UI de Dokploy apuntando al puerto 8080 del servicio `app`.
+# La API S3 escucha en 9000: asígnale otro dominio (p. ej. s3.tudominio) en Dokploy y ponlo en CLOUDMESH_S3_URL.
+# Para el estilo virtual-host (<bucket>.s3.tudominio) añade también el comodín *.s3.tudominio al puerto 9000.
+# Las variables se definen en la pestaña Environment de Dokploy. Solo las claves son obligatorias:
+# vacías, las demás toman el valor por defecto del binario (ver .env.example); ADDR y DATA_DIR van en el Dockerfile.
+# El alias `cloudmesh-app` evita que otro stack con un servicio `app` capture el tráfico en la red compartida.
+# También sirve en local: `make prod` (necesita .env y publica 8080 vía docker-compose.prod-local.yml).
+services:
+  app:
+    build:
+      context: .
+      args:
+        VERSION: ${CLOUDMESH_VERSION:-dokploy}
+    restart: unless-stopped
+    # Dokploy espera a que el contenedor quede healthy: healthcheck pide /api/healthz
+    # (solo responde tras abrir la base y aplicar migraciones) y comprueba la API S3.
+    # start_period da margen a migraciones largas sin contar los fallos como reintentos.
+    healthcheck:
+      test: ["CMD", "/cloudmesh", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+      start_interval: 2s
+    environment:
+      CLOUDMESH_MASTER_KEY: ${CLOUDMESH_MASTER_KEY:?Define CLOUDMESH_MASTER_KEY (openssl rand -base64 32)}
+      CLOUDMESH_SESSION_SECRET: ${CLOUDMESH_SESSION_SECRET:?Define CLOUDMESH_SESSION_SECRET (openssl rand -base64 32)}
+      CLOUDMESH_MAX_UPLOAD_BYTES: ${CLOUDMESH_MAX_UPLOAD_BYTES:-}
+      CLOUDMESH_MAX_UPLOADS: ${CLOUDMESH_MAX_UPLOADS:-}
+      CLOUDMESH_MAX_DOWNLOADS: ${CLOUDMESH_MAX_DOWNLOADS:-}
+      # Detrás del Traefik de Dokploy: usar X-Forwarded-For / X-Forwarded-Proto.
+      CLOUDMESH_TRUST_PROXY: ${CLOUDMESH_TRUST_PROXY:-1}
+      CLOUDMESH_LOG_LEVEL: ${CLOUDMESH_LOG_LEVEL:-}
+      CLOUDMESH_S3_ADDR: ${CLOUDMESH_S3_ADDR:-}
+      CLOUDMESH_S3_URL: ${CLOUDMESH_S3_URL:-}
+      CLOUDMESH_S3_REGION: ${CLOUDMESH_S3_REGION:-}
+      CLOUDMESH_SMTP_URL: ${CLOUDMESH_SMTP_URL:-}
+      CLOUDMESH_SMTP_FROM: ${CLOUDMESH_SMTP_FROM:-}
+    expose:
+      - "8080"
+      - "9000"
+    volumes:
+      - cloudmesh_data:/data
+    networks:
+      default: {}
+      dokploy-network:
+        aliases: [cloudmesh-app]
+
+volumes:
+  cloudmesh_data:
+
+networks:
+  dokploy-network:
+    external: true

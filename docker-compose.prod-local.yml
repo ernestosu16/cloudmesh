@@ -1,0 +1,14 @@
+# Complemento para probar la imagen de producción en local sin Traefik:
+#   docker compose -f docker-compose.dokploy.yml -f docker-compose.prod-local.yml --env-file .env up --build
+services:
+  app:
+    ports:
+      - "8080:8080"
+      - "9000:9000"
+    networks:
+      dokploy-network: null
+
+networks:
+  dokploy-network:
+    external: false
+    name: cloudmesh_local_edge

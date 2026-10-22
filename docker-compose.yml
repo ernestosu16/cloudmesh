@@ -1,0 +1,47 @@
+# Desarrollo: todo corre en contenedores, nada se instala en la máquina.
+#   docker compose up        (o `make dev`)
+# API con recarga en :8080 y Vite con HMR en :5173. Abre http://localhost:5173
+# Si esos puertos están ocupados, define CLOUDMESH_API_PORT y CLOUDMESH_WEB_PORT en .env.
+# Las claves de desarrollo se generan solas y viven en el volumen `dev_data`.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.dev.Dockerfile
+    volumes:
+      - .:/src
+      - go_mod:/go/pkg/mod
+      - go_build:/root/.cache/go-build
+      - dev_data:/data
+    ports:
+      - "${CLOUDMESH_API_PORT:-8080}:8080"
+      # API S3 (aws-cli, rclone, restic): http://localhost:9000
+      - "${CLOUDMESH_S3_PORT:-9000}:9000"
+    environment:
+      CLOUDMESH_S3_URL: http://localhost:${CLOUDMESH_S3_PORT:-9000}
+      CLOUDMESH_MAX_UPLOAD_BYTES: ${CLOUDMESH_MAX_UPLOAD_BYTES:-5368709120}
+      # Proveedor "fake" local (guarda en el volumen dev_data) para probar sin cuentas Mega (contraseña: ok). Pon 0 para desactivarlo.
+      CLOUDMESH_DEV_FAKE_PROVIDER: ${CLOUDMESH_DEV_FAKE_PROVIDER:-1}
+
+  web:
+    image: node:24-alpine
+    working_dir: /src/web
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_API_PROXY: http://api:8080
+      VITE_POLL: "1"
+    volumes:
+      - ./web:/src/web
+      - web_node_modules:/src/web/node_modules
+      - corepack_cache:/root/.cache/node/corepack
+    ports:
+      - "${CLOUDMESH_WEB_PORT:-5173}:5173"
+    depends_on:
+      - api
+
+volumes:
+  go_mod:
+  go_build:
+  dev_data:
+  web_node_modules:
+  corepack_cache:

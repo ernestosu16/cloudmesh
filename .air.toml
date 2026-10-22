@@ -1,0 +1,13 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/cloudmesh ./cmd/cloudmesh"
+  bin = "./tmp/cloudmesh"
+  args_bin = ["serve"]
+  include_ext = ["go", "sql"]
+  exclude_dir = ["web", "tmp", "data", "bin"]
+  delay = 500
+
+[log]
+  time = false
