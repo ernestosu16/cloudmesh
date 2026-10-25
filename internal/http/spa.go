@@ -38,13 +38,21 @@ func spaHandler() http.Handler {
 		if name == "" {
 			name = "index.html"
 		}
-		if _, err := fs.Stat(dist, name); err != nil {
+		if _, err := fs.Stat(dist, name); err != nil && strings.HasPrefix(name, "assets/") {
+			// Un trozo de una build anterior: 404 y no index.html, para que la
+			// importación falle limpia y la página ofrezca actualizar.
+			http.NotFound(w, r)
+			return
+		} else if err != nil {
 			// Ruta del SPA: entregar index.html sin cachear.
 			w.Header().Set("Cache-Control", "no-cache")
 			r.URL.Path = "/"
 		} else if strings.HasPrefix(name, "assets/") {
 			// Assets con hash en el nombre: cache larga.
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else if name == "version.json" {
+			// Lo consulta la página abierta para saber si hay una build nueva.
+			w.Header().Set("Cache-Control", "no-store")
 		} else if name == "sw.js" || name == "manifest.webmanifest" {
 			// Sin nombre con hash: el navegador debe ver cada versión nueva.
 			w.Header().Set("Cache-Control", "no-cache")

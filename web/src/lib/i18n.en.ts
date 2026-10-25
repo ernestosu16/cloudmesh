@@ -640,4 +640,12 @@ export const en: Record<string, string> = {
   'Escribe {palabra} para confirmar': 'Type {palabra} to confirm',
   'Formateando…': 'Formatting…',
   'Formatear': 'Format',
+  'Nueva versión disponible': 'New version available',
+  'Se publicó una actualización de CloudMesh el {fecha}. La página se recargará para aplicarla.':
+    'A CloudMesh update was published on {fecha}. The page will reload to apply it.',
+  'Hay una actualización de CloudMesh lista. La página se recargará para aplicarla.': 'A CloudMesh update is ready. The page will reload to apply it.',
+  'Queda 1 subida en curso: podrás actualizar cuando termine.': '1 upload still in progress: you can update when it finishes.',
+  'Quedan {n} subidas en curso: podrás actualizar cuando terminen.': '{n} uploads still in progress: you can update when they finish.',
+  'Más tarde': 'Later',
+  'Actualizar ahora': 'Update now',
 }
