@@ -68,6 +68,9 @@ func (s *Server) handleListFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	listing, err := s.vfs.List(r.Context(), id)
+	if err == nil {
+		listing, err = s.vfs.WithSizes(r.Context(), a.Listing(listing), a.Sees)
+	}
 	if err != nil {
 		s.vfsError(w, "listar carpeta", err)
 		return
@@ -76,7 +79,7 @@ func (s *Server) handleListFolder(w http.ResponseWriter, r *http.Request) {
 		vfs.Listing
 		// Writable: se puede subir y cambiar cosas aquí (además del rol).
 		Writable bool `json:"writable"`
-	}{a.Listing(listing), a.CanWrite(id)}
+	}{listing, a.CanWrite(id)}
 	writeJSON(w, http.StatusOK, out)
 }
 

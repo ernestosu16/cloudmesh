@@ -12,7 +12,7 @@ Lee `PLAN.md` antes de tocar código: ahí están el alcance, la arquitectura y 
 - `internal/storage` — contrato `Provider` (abre sesiones) y `Session` (cuenta viva); adaptadores `mega` (real) y `fake` (tests). En `mega/download.go`, `pump` pide 4 trozos a la vez y el enlace de `NewDownload` se reutiliza 5 minutos por nodo (el MAC se comprueba una vez por enlace).
 - `internal/accounts` — cuentas conectadas: credenciales cifradas, cuota, aporte (`Capacity`: techo de llenado que usan enrutado, reparación y cuota; nunca `QuotaTotal` directamente), cache de sesiones, sesiones de «Probar conexión», estado `reconnect_required` y cuentas apartadas por límite de transferencia (`Throttled`, en memoria, una hora).
 - `internal/crypto` — AES-256-GCM con `CLOUDMESH_MASTER_KEY`.
-- `internal/vfs` — drive virtual: carpetas (raíz = id 0), índice de archivos, búsqueda. `access.go`: carpetas restringidas (`AccessFor` → `CanRead`/`CanWrite`, `WithoutRestricted` para enlaces públicos).
+- `internal/vfs` — drive virtual: carpetas (raíz = id 0), índice de archivos, búsqueda. `access.go`: carpetas restringidas (`AccessFor` → `CanRead`/`CanWrite`, `WithoutRestricted` para enlaces públicos) `WithSizes` pone a las subcarpetas de un listado lo que ocupan con todo lo que cuelga de ellas, sin contar lo que el usuario o el enlace no ve (`Access.Sees`, `vfs.Open`).
 - `internal/mail` — envío SMTP con la stdlib (`CLOUDMESH_SMTP_URL`); nil si no está configurado.
 - `internal/sync` — reconciliación índice ↔ proveedor (solo archivos `whole`; ignora `cloudmesh/blocks/`); `Run` lanza la pasada periódica desde `main`.
 - `internal/erasure` — Reed–Solomon (`k+m`) con benchmarks.

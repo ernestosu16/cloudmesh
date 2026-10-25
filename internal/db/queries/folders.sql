@@ -79,3 +79,17 @@ SELECT * FROM folder_access ORDER BY folder_id, user_id;
 
 -- name: DeleteAllFolders :exec
 DELETE FROM folders;
+
+-- name: SubfolderSizes :many
+-- Each folder below the children of parent_id, tagged with the child it hangs
+-- from (top), whether a restricted folder lies on the way (closed) and the
+-- bytes of its own files, counted like ListFilesInFolder (no trash, no parts,
+-- nothing still uploading).
+WITH RECURSIVE tree(top, id, closed) AS (
+    SELECT folders.id, folders.id, folders.restricted FROM folders WHERE folders.parent_id = @parent_id
+    UNION ALL
+    SELECT tree.top, f.id, MAX(tree.closed, f.restricted) FROM folders f JOIN tree ON f.parent_id = tree.id
+)
+SELECT CAST(tree.top AS INTEGER) AS top, CAST(tree.id AS INTEGER) AS id, CAST(tree.closed AS INTEGER) AS closed,
+    CAST(COALESCE((SELECT SUM(files.size) FROM files WHERE files.folder_id = tree.id AND files.status <> 'uploading' AND files.deleted_at = 0 AND files.internal = 0), 0) AS INTEGER) AS bytes
+FROM tree;

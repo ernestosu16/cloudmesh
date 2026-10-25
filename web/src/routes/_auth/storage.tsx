@@ -62,7 +62,7 @@ import { ReconnectDialog } from '@/features/accounts/CredentialsDialog'
 import { ConnectForm } from '@/features/accounts/ConnectForm'
 import { contributionLabel } from '@/features/accounts/Contribution'
 import { SettingsDialog } from '@/features/accounts/SettingsDialog'
-import { usableBytes } from '@/features/accounts/usable'
+import { usableSpace } from '@/features/accounts/usable'
 import { accountCodes, accountColors } from '@/features/accounts/codes'
 import { ErrorText, PageHeader, Panel, Tag } from '@/features/shell/Page'
 import { requireRole } from '@/features/auth/roles'
@@ -120,7 +120,7 @@ function StoragePage() {
   const k = settings.data_shards
   const m = settings.parity_shards
   const striped = k + m > 1 && pool.length >= k + m
-  const usable = usableBytes(quota, settings)
+  const usable = usableSpace(quota, settings)
   const current = schemesFor(pool.length).find((s) => s.k === k && s.m === m)
 
   return (
@@ -133,8 +133,8 @@ function StoragePage() {
       <Panel aria-labelledby="pool-title" className="grid grid-cols-1 gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="pool-title" className="text-2xl font-bold">
-            {formatBytes(quota.used)}{' '}
-            <span className="text-base font-medium text-muted-foreground">{t('usados de {total} útiles', { total: formatBytes(usable) })}</span>
+            {formatBytes(usable.used)}{' '}
+            <span className="text-base font-medium text-muted-foreground">{t('usados de {total} útiles', { total: formatBytes(usable.total) })}</span>
           </h2>
           <Button
             variant={configOpen ? 'default' : 'outline'}

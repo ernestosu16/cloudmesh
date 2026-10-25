@@ -74,6 +74,9 @@ func (a Access) CanWrite(folderID int64) bool {
 	return a.all || (a.readOnly != nil && !a.readOnly[folderID])
 }
 
+// Sees es CanRead con la firma de WithSizes.
+func (a Access) Sees(folderID int64, _ bool) bool { return a.CanRead(folderID) }
+
 // Listing quita de un listado las subcarpetas que no se ven.
 func (a Access) Listing(l Listing) Listing {
 	if a.all {
@@ -206,6 +209,9 @@ func WithoutRestricted(l Listing) Listing {
 	l.Folders = folders
 	return l
 }
+
+// Open es lo que suma WithSizes para un enlace público: nada bajo una restringida.
+func Open(_ int64, restricted bool) bool { return !restricted }
 
 // IsWithinOpen es IsWithin sin atravesar carpetas restringidas: id cuelga de
 // ancestor y ninguna carpeta entre las dos (ancestor excluida) está restringida.

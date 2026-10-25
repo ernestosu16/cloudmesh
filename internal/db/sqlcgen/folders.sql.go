@@ -393,6 +393,56 @@ func (q *Queries) SetFolderRestricted(ctx context.Context, arg SetFolderRestrict
 	return result.RowsAffected()
 }
 
+const subfolderSizes = `-- name: SubfolderSizes :many
+WITH RECURSIVE tree(top, id, closed) AS (
+    SELECT folders.id, folders.id, folders.restricted FROM folders WHERE folders.parent_id = ?1
+    UNION ALL
+    SELECT tree.top, f.id, MAX(tree.closed, f.restricted) FROM folders f JOIN tree ON f.parent_id = tree.id
+)
+SELECT CAST(tree.top AS INTEGER) AS top, CAST(tree.id AS INTEGER) AS id, CAST(tree.closed AS INTEGER) AS closed,
+    CAST(COALESCE((SELECT SUM(files.size) FROM files WHERE files.folder_id = tree.id AND files.status <> 'uploading' AND files.deleted_at = 0 AND files.internal = 0), 0) AS INTEGER) AS bytes
+FROM tree
+`
+
+type SubfolderSizesRow struct {
+	Top    int64 `json:"top"`
+	ID     int64 `json:"id"`
+	Closed int64 `json:"closed"`
+	Bytes  int64 `json:"bytes"`
+}
+
+// Each folder below the children of parent_id, tagged with the child it hangs
+// from (top), whether a restricted folder lies on the way (closed) and the
+// bytes of its own files, counted like ListFilesInFolder (no trash, no parts,
+// nothing still uploading).
+func (q *Queries) SubfolderSizes(ctx context.Context, parentID int64) ([]SubfolderSizesRow, error) {
+	rows, err := q.db.QueryContext(ctx, subfolderSizes, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SubfolderSizesRow{}
+	for rows.Next() {
+		var i SubfolderSizesRow
+		if err := rows.Scan(
+			&i.Top,
+			&i.ID,
+			&i.Closed,
+			&i.Bytes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const trashFolderFiles = `-- name: TrashFolderFiles :exec
 UPDATE files SET deleted_at = ?1
 WHERE folder_id = ?2 AND deleted_at = 0 AND internal = 0

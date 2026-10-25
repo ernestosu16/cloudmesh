@@ -269,6 +269,8 @@ export interface Folder {
   created_at: number
   /** Solo la ven los administradores y los usuarios con acceso. */
   restricted?: boolean
+  /** Lo que ocupa con sus subcarpetas; solo en listados (no en búsquedas). */
+  size?: number
 }
 
 export type AccessLevel = 'read' | 'write'

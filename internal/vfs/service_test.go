@@ -150,3 +150,64 @@ func TestEnsureFolder(t *testing.T) {
 		t.Fatal("EnsureFolder creó dos veces")
 	}
 }
+
+func TestWithSizes(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+	file := func(folder int64, size int64, status string, internal int64) int64 {
+		t.Helper()
+		f, err := s.q.InsertFile(ctx, sqlcgen.InsertFileParams{FolderID: folder, Name: "f", Size: size, Layout: "rs", Status: status, Internal: internal})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return f.ID
+	}
+	docs, _ := s.CreateFolder(ctx, RootID, "Docs")
+	fotos, _ := s.CreateFolder(ctx, docs.ID, "Fotos")
+	secret, _ := s.CreateFolder(ctx, docs.ID, "Secreto")
+	inner, _ := s.CreateFolder(ctx, secret.ID, "Dentro")
+	s.CreateFolder(ctx, RootID, "Vacía")
+	file(RootID, 1, "ready", 0)
+	file(docs.ID, 10, "ready", 0)
+	file(fotos.ID, 100, "degraded", 0)
+	file(fotos.ID, 5000, "uploading", 0)
+	file(fotos.ID, 6000, "ready", 1)
+	if err := s.Trash(ctx, file(fotos.ID, 7000, "ready", 0)); err != nil {
+		t.Fatal(err)
+	}
+	file(secret.ID, 1000, "ready", 0)
+	file(inner.ID, 2000, "ready", 0)
+	if _, err := s.SetFolderAccess(ctx, secret.ID, true, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	sizes := func(id int64, visible func(int64, bool) bool) map[string]int64 {
+		t.Helper()
+		l, err := s.List(ctx, id)
+		if err == nil {
+			l, err = s.WithSizes(ctx, l, visible)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]int64{}
+		for _, f := range l.Folders {
+			out[f.Name] = *f.Size
+		}
+		return out
+	}
+	all := FullAccess().Sees
+	if got := sizes(RootID, all); got["Docs"] != 3110 || got["Vacía"] != 0 {
+		t.Fatalf("raíz = %v", got)
+	}
+	if got := sizes(docs.ID, all); got["Fotos"] != 100 || got["Secreto"] != 3000 {
+		t.Fatalf("docs = %v", got)
+	}
+	if got := sizes(RootID, Open); got["Docs"] != 110 {
+		t.Fatalf("enlace = %v", got)
+	}
+	hidden := Access{hidden: map[int64]bool{secret.ID: true, inner.ID: true}, readOnly: map[int64]bool{}}
+	if got := sizes(RootID, hidden.Sees); got["Docs"] != 110 {
+		t.Fatalf("sin acceso = %v", got)
+	}
+}

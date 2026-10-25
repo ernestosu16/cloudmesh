@@ -218,7 +218,10 @@ func (s *Server) handlePublicFolder(w http.ResponseWriter, r *http.Request) {
 		s.shareError(w, "listar enlace", err)
 		return
 	}
-	l = vfs.WithoutRestricted(l)
+	if l, err = s.vfs.WithSizes(r.Context(), vfs.WithoutRestricted(l), vfs.Open); err != nil {
+		s.shareError(w, "listar enlace", err)
+		return
+	}
 	path := append(l.Breadcrumbs, l.Folder)
 	for i, f := range path {
 		if f.ID == sh.TargetID {

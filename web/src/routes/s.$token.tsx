@@ -184,7 +184,7 @@ function FolderView({
   const { path, folders, files } = listing.data
   const current = path[path.length - 1]
   const n = folders.length + files.length
-  const size = files.reduce((a, f) => a + f.size, 0)
+  const size = [...folders, ...files].reduce((a, f) => a + (f.size ?? 0), 0)
 
   return (
     <>
@@ -236,7 +236,10 @@ function FolderView({
                 <span className="flex h-28 items-center justify-center bg-muted text-muted-foreground">
                   <Folder className="size-8" aria-hidden />
                 </span>
-                <span className="truncate px-3.5 py-3 text-sm font-medium">{f.name}</span>
+                <span className="grid grid-cols-1 min-w-0 px-3.5 py-1.5">
+                  <span className="truncate text-sm font-medium">{f.name}</span>
+                  {f.size !== undefined && <span className="font-mono text-xs text-muted-foreground">{formatBytes(f.size)}</span>}
+                </span>
               </Link>
             </li>
           ))}

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useRouteContext, useSearch } from '@tanstack/react-router'
 import { Boxes, Database, Folder, FolderUp, Link2, LogOut, Menu, Trash2, Upload, User, Users } from 'lucide-react'
 import { logout, meQuery, quotaQuery, settingsQuery } from '@/lib/api'
-import { usableBytes } from '@/features/accounts/usable'
+import { usableSpace } from '@/features/accounts/usable'
 import { displayName, formatBytes, initials, percent } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
@@ -108,7 +108,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const quota = useQuery({ ...quotaQuery, enabled: can(user, 'admin') })
   const settings = useQuery({ ...settingsQuery, enabled: can(user, 'admin') })
   // Mismo «útil» que la página de almacenamiento: descontada la paridad.
-  const usable = quota.data && settings.data ? usableBytes(quota.data, settings.data) : 0
+  const usable = quota.data && settings.data ? usableSpace(quota.data, settings.data) : { used: 0, total: 0 }
 
   const signOut = useMutation({
     mutationFn: logout,
@@ -180,11 +180,11 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
             <span className="text-[13px] font-semibold">{t('Almacenamiento')}</span>
             <span className="font-mono text-xs whitespace-nowrap text-secondary-foreground">
-              {formatBytes(quota.data.used)} / {formatBytes(usable)}
+              {formatBytes(usable.used)} / {formatBytes(usable.total)}
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-border">
-            <div className="h-full bg-primary" style={{ width: `${percent(quota.data.used, usable)}%` }} />
+            <div className="h-full bg-primary" style={{ width: `${percent(usable.used, usable.total)}%` }} />
           </div>
         </div>
         )

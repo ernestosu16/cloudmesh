@@ -35,6 +35,9 @@ type Folder struct {
 	CreatedAt int64  `json:"created_at"`
 	// Restricted: solo la ven los administradores y los usuarios con acceso.
 	Restricted bool `json:"restricted,omitempty"`
+	// Size son los bytes de sus archivos y los de sus subcarpetas; solo en
+	// listados (WithSizes), sin la papelera.
+	Size *int64 `json:"size,omitempty"`
 }
 
 type File struct {
@@ -145,6 +148,30 @@ func (s *Service) List(ctx context.Context, id int64) (Listing, error) {
 		out.Files = append(out.Files, FromRow(f))
 	}
 	return out, nil
+}
+
+// WithSizes pone a cada subcarpeta del listado lo que ocupa con todo lo que
+// cuelga de ella. Solo suma las carpetas que visible deja ver; restricted dice
+// si hay una carpeta restringida en el camino (ella incluida).
+func (s *Service) WithSizes(ctx context.Context, l Listing, visible func(id int64, restricted bool) bool) (Listing, error) {
+	rows, err := s.q.SubfolderSizes(ctx, l.Folder.ID)
+	if err != nil {
+		return Listing{}, err
+	}
+	sizes := map[int64]int64{}
+	for _, r := range rows {
+		if visible(r.ID, r.Closed != 0) {
+			sizes[r.Top] += r.Bytes
+		}
+	}
+	folders := make([]Folder, len(l.Folders))
+	for i, f := range l.Folders {
+		n := sizes[f.ID]
+		f.Size = &n
+		folders[i] = f
+	}
+	l.Folders = folders
+	return l, nil
 }
 
 // GetFile devuelve un archivo del disco por id. Los de la papelera no existen

@@ -149,6 +149,7 @@ export function FolderRow({
 }) {
   const { edit } = actions
   const date = relativeTime(folder.created_at)
+  const size = folder.size === undefined ? undefined : formatBytes(folder.size)
   return (
     <Row
       select={select}
@@ -161,8 +162,8 @@ export function FolderRow({
           {folder.restricted && <Lock className="size-3.5 shrink-0 text-warning" aria-label={t('Carpeta restringida')} />}
         </Link>
       }
-      meta={`${t('Carpeta')} · ${date}${share ? ` · ${t('enlace')}` : ''}`}
-      size="—"
+      meta={`${t('Carpeta')}${size ? ` · ${size}` : ''} · ${date}${share ? ` · ${t('enlace')}` : ''}`}
+      size={size ?? '—'}
       date={date}
       access={folder.restricted ? <Tag tone="warning">{t('Restringida')}</Tag> : <AccessTag share={share} />}
       actions={
