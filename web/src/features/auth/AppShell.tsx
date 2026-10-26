@@ -52,7 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-        <SheetContent className="overflow-y-auto px-4 py-5">
+        <SheetContent className="overflow-y-auto px-4 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <SheetTitle className="sr-only">{t('Menú')}</SheetTitle>
           <Sidebar onNavigate={() => setMenuOpen(false)} />
         </SheetContent>
@@ -132,7 +132,8 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    // flex-1: en el menú del móvil también ocupa todo el alto, con el usuario al pie.
+    <div className="flex w-full flex-1 flex-col gap-6">
       <Link to="/" search={{}} onClick={onNavigate} className="px-2">
         <Logo />
       </Link>
