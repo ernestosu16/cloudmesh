@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Breadcrumbs } from '@/features/drive/Breadcrumbs'
 import { FileRow, FolderRow, RowsHeader, SelectBox, type FileActions, type FolderActions } from '@/features/drive/Rows'
+import { sortListing, useDriveSort, type Sort, type SortKey } from '@/features/drive/sort'
 import { NameDialog } from '@/features/drive/NameDialog'
 import { DetailsDialog, MoveDialog, PreviewDialog, useInvalidateDrive } from '@/features/drive/FileDialogs'
 import { uploads } from '@/features/uploads/store'
@@ -111,6 +112,7 @@ function DrivePage() {
   const [dropFolder, setDropFolder] = useState<number | null>(null)
   const dragDepth = useRef(0)
   const [filter, setFilter] = useState<Filter>('all')
+  const [sort, toggleSort] = useDriveSort()
 
   const [creating, setCreating] = useState(false)
   const [renaming, setRenaming] = useState<Target | null>(null)
@@ -222,8 +224,12 @@ function DrivePage() {
   }
 
   const searching = q.trim().length > 0
-  const folders = filter === 'all' || filter === 'folders' ? data.folders : []
-  const files = data.files.filter((f) => fileMatches(f, filter))
+  const { folders, files } = sortListing(
+    filter === 'all' || filter === 'folders' ? data.folders : [],
+    data.files.filter((f) => fileMatches(f, filter)),
+    sort,
+    shares.get,
+  )
   const empty = folders.length === 0 && files.length === 0
   const here = data.folder.id === 0 ? t('Mi espacio') : data.folder.name
 
@@ -345,7 +351,17 @@ function DrivePage() {
 
       <div>
         {searching ? (
-          <SearchResults q={q} result={search.data} pending={search.isPending} filter={filter} shares={shares} fileActions={fileActions} folderActions={folderActions} />
+          <SearchResults
+            q={q}
+            result={search.data}
+            pending={search.isPending}
+            filter={filter}
+            sort={sort}
+            onSort={toggleSort}
+            shares={shares}
+            fileActions={fileActions}
+            folderActions={folderActions}
+          />
         ) : empty ? (
           <div className="rounded-2xl border bg-card p-10 text-center text-sm text-muted-foreground">
             {filter === 'all' ? t('Carpeta vacía.') : t('Nada de este tipo en esta carpeta.')}
@@ -374,7 +390,7 @@ function DrivePage() {
                 </Button>
               </div>
             ) : (
-              <RowsHeader selectAll={selectAll} />
+              <RowsHeader selectAll={selectAll} sort={sort} onSort={toggleSort} />
             )}
             <ul className="divide-y divide-secondary">
               {folders.map((f) => (
@@ -541,6 +557,8 @@ function SearchResults({
   result,
   pending,
   filter,
+  sort,
+  onSort,
   shares,
   fileActions,
   folderActions,
@@ -549,13 +567,19 @@ function SearchResults({
   result?: { folders: Folder[]; files: DriveFile[] }
   pending: boolean
   filter: Filter
+  sort: Sort
+  onSort: (key: SortKey) => void
   shares: ReturnType<typeof useShareIndex>
   fileActions: FileActions
   folderActions: FolderActions
 }) {
   if (pending || !result) return <p className="text-sm text-muted-foreground">{t('Buscando…')}</p>
-  const folders = filter === 'all' || filter === 'folders' ? result.folders : []
-  const files = result.files.filter((f) => fileMatches(f, filter))
+  const { folders, files } = sortListing(
+    filter === 'all' || filter === 'folders' ? result.folders : [],
+    result.files.filter((f) => fileMatches(f, filter)),
+    sort,
+    shares.get,
+  )
   const n = folders.length + files.length
   if (n === 0) return <p className="text-sm text-muted-foreground">{t('Nada coincide con «{q}».', { q })}</p>
   return (
@@ -564,7 +588,7 @@ function SearchResults({
         {n === 1 ? t('1 resultado') : t('{n} resultados', { n })}
       </p>
       <div className="overflow-hidden rounded-2xl border bg-card">
-        <RowsHeader />
+        <RowsHeader sort={sort} onSort={onSort} />
         <ul className="divide-y divide-secondary">
           {folders.map((f) => (
             <FolderRow key={`d${f.id}`} folder={f} share={shares.get('folder', f.id)} actions={folderActions} />

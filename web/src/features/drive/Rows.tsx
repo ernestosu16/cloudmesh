@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Download, Eye, FolderInput, Info, Link2, Lock, MoreVertical, Pencil, Trash2, UserCog } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Eye, FolderInput, Info, Link2, Lock, MoreVertical, Pencil, Trash2, UserCog } from 'lucide-react'
 import { fileContentUrl, type DriveFile, type Folder, type Share } from '@/lib/api'
 import { formatBytes, relativeTime } from '@/lib/format'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tag } from '@/features/shell/Page'
 import { FileTypeIcon, FolderIcon } from './icons'
-import { t } from '@/lib/i18n'
+import { msg, t } from '@/lib/i18n'
+import type { Sort, SortKey } from './sort'
 
 /** Casilla de selección múltiple; la etiqueta amplía la zona táctil. */
 export function SelectBox({
@@ -43,21 +44,74 @@ export function SelectBox({
   )
 }
 
+const columns: { key: SortKey; label: string; width: string }[] = [
+  { key: 'name', label: msg('Nombre'), width: 'min-w-0 flex-1' },
+  { key: 'size', label: msg('Tamaño'), width: 'w-24' },
+  { key: 'date', label: msg('Modificado'), width: 'w-32' },
+  { key: 'access', label: msg('Acceso'), width: 'w-28' },
+]
+
+function SortIcon({ dir }: { dir?: 'asc' | 'desc' }) {
+  if (dir === 'asc') return <ArrowUp className="size-3.5 shrink-0" aria-hidden />
+  if (dir === 'desc') return <ArrowDown className="size-3.5 shrink-0" aria-hidden />
+  return <ArrowUpDown className="size-3.5 shrink-0 opacity-40" aria-hidden />
+}
+
+const sortState = (dir?: 'asc' | 'desc') => (dir === 'asc' ? t('ascendente') : dir === 'desc' ? t('descendente') : t('sin ordenar'))
+
 /**
  * Cabecera de columnas; solo en pantallas medianas, donde las filas son tabla.
- * Con selectAll, la casilla de seleccionar todo se ve también en móvil.
+ * Con selectAll, la casilla de seleccionar todo se ve también en móvil. Con
+ * onSort, cada columna ordena al pulsarla (ascendente → descendente → sin
+ * orden); en móvil, donde no hay columnas, lo hace un menú «Ordenar».
  */
-export function RowsHeader({ selectAll }: { selectAll?: ReactNode }) {
+export function RowsHeader({ selectAll, sort, onSort }: { selectAll?: ReactNode; sort?: Sort; onSort?: (key: SortKey) => void }) {
+  const dirOf = (key: SortKey) => (sort?.key === key ? sort.dir : undefined)
   return (
     <div
-      className={`h-11 items-center gap-3 border-b px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase md:flex md:px-5 ${selectAll ? 'flex' : 'hidden'}`}
+      className={`h-11 items-center gap-3 border-b px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase md:flex md:px-5 ${selectAll || onSort ? 'flex' : 'hidden'}`}
     >
       {selectAll}
-      <span className="flex-1 md:hidden">{t('Seleccionar todo')}</span>
-      <span aria-hidden className="hidden flex-1 md:block">{t('Nombre')}</span>
-      <span aria-hidden className="hidden w-24 md:block">{t('Tamaño')}</span>
-      <span aria-hidden className="hidden w-32 md:block">{t('Modificado')}</span>
-      <span aria-hidden className="hidden w-28 md:block">{t('Acceso')}</span>
+      <span className="flex-1 md:hidden">{selectAll && t('Seleccionar todo')}</span>
+      {onSort && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="-mr-2 text-xs text-muted-foreground normal-case md:hidden">
+              {sort ? t(columns.find((c) => c.key === sort.key)!.label) : t('Ordenar')}
+              <SortIcon dir={sort?.dir} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {columns.map((c) => (
+              // preventDefault: el menú sigue abierto para pulsar otra vez y cambiar el sentido.
+              <DropdownMenuItem key={c.key} onSelect={(e) => (e.preventDefault(), onSort(c.key))}>
+                <span className="flex-1">{t(c.label)}</span>
+                <SortIcon dir={dirOf(c.key)} />
+                <span className="sr-only">{sortState(dirOf(c.key))}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+      {columns.map((c) =>
+        onSort ? (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => onSort(c.key)}
+            title={t('Ordenar por {columna}', { columna: t(c.label) })}
+            className={`hidden items-center gap-1 text-left tracking-wider uppercase hover:text-foreground md:flex ${c.width} ${dirOf(c.key) ? 'text-foreground' : ''}`}
+          >
+            <span className="truncate">{t(c.label)}</span>
+            <SortIcon dir={dirOf(c.key)} />
+            <span className="sr-only">{sortState(dirOf(c.key))}</span>
+          </button>
+        ) : (
+          <span key={c.key} aria-hidden className={`hidden md:block ${c.width}`}>
+            {t(c.label)}
+          </span>
+        ),
+      )}
       <span className="hidden w-[88px] md:block" />
     </div>
   )

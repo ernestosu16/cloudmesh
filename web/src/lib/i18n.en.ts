@@ -654,4 +654,9 @@ export const en: Record<string, string> = {
   'Editar llave de acceso': 'Edit access key',
   'Los clientes que ya usan esta llave siguen conectados y tienen los permisos nuevos desde su siguiente petición.':
     'Clients already using this key stay connected and get the new permissions from their next request.',
+  'Ordenar': 'Sort',
+  'Ordenar por {columna}': 'Sort by {columna}',
+  'ascendente': 'ascending',
+  'descendente': 'descending',
+  'sin ordenar': 'unsorted',
 }
