@@ -10,15 +10,19 @@ import process from 'node:process'
 // página consulta. En el HTML y no en el bundle: así no cambia el hash de todos
 // los assets en cada build. VITE_BUILD_ID la fija desde fuera si hace falta.
 const buildId = process.env.VITE_BUILD_ID || Date.now().toString(36)
+const builtAt = new Date().toISOString()
 const buildInfo: Plugin = {
   name: 'build-info',
   apply: 'build',
-  transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'app-build-id', content: buildId }, injectTo: 'head' }],
+  transformIndexHtml: () => [
+    { tag: 'meta', attrs: { name: 'app-build-id', content: buildId }, injectTo: 'head' },
+    { tag: 'meta', attrs: { name: 'app-build-time', content: builtAt }, injectTo: 'head' },
+  ],
   generateBundle() {
     this.emitFile({
       type: 'asset',
       fileName: 'version.json',
-      source: JSON.stringify({ build_id: buildId, built_at: new Date().toISOString() }),
+      source: JSON.stringify({ build_id: buildId, built_at: builtAt }),
     })
   },
 }

@@ -18,6 +18,18 @@ export function currentBuildId(): string | null {
 }
 
 /**
+ * Versión que se enseña en el menú: fecha de la build (UTC) y su id, p. ej.
+ * «v2026.10.25 · mvoh5lln»; «dev» en desarrollo.
+ */
+export function versionLabel(): string {
+  const id = currentBuildId()
+  if (!id) return 'dev'
+  const at = document.querySelector<HTMLMetaElement>('meta[name="app-build-time"]')?.content ?? ''
+  const day = /^\d{4}-\d{2}-\d{2}/.test(at) ? `v${at.slice(0, 10).replaceAll('-', '.')} · ` : ''
+  return `${day}${id}`
+}
+
+/**
  * La build que publica el servidor, o null si no se sabe (sin red, respuesta
  * rara). Nunca lanza: «no se sabe» no es «hay versión nueva».
  */

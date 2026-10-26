@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { UploadPanel } from '@/features/uploads/UploadPanel'
 import { uploads } from '@/features/uploads/store'
 import { Avatar, Logo } from '@/features/shell/Logo'
+import { versionLabel } from '@/features/update/check'
 import { can } from '@/features/auth/roles'
 import { msg, t } from '@/lib/i18n'
 
@@ -224,6 +225,9 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <LogOut />
         </Button>
       </div>
+      <p className="-mt-5 px-2 font-mono text-[10px] text-muted-foreground/70" title={t('Versión de CloudMesh')}>
+        {versionLabel()}
+      </p>
     </div>
   )
 }

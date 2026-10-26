@@ -648,4 +648,5 @@ export const en: Record<string, string> = {
   'Quedan {n} subidas en curso: podrás actualizar cuando terminen.': '{n} uploads still in progress: you can update when they finish.',
   'Más tarde': 'Later',
   'Actualizar ahora': 'Update now',
+  'Versión de CloudMesh': 'CloudMesh version',
 }
