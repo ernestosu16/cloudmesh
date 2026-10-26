@@ -70,6 +70,7 @@ type Key struct {
 	Name           string   `json:"name"`
 	Permission     string   `json:"permission"`
 	Buckets        []string `json:"buckets"` // vacío: todos
+	BucketIDs      []int64  `json:"bucket_ids"`
 	CreatedAt      int64    `json:"created_at"`
 	CreatedByEmail string   `json:"created_by_email,omitempty"`
 	LastUsedAt     int64    `json:"last_used_at"`
@@ -85,6 +86,7 @@ type NewKey struct {
 }
 
 type Service struct {
+	db        *sql.DB
 	q         *sqlcgen.Queries
 	vfs       *vfs.Service
 	transfer  *transfer.Service
@@ -99,7 +101,7 @@ type Service struct {
 // NewService crea el servicio. domain (sin puerto, p. ej. «s3.ejemplo.com»)
 // activa el estilo virtual-host; vacío deja solo el estilo de ruta.
 func NewService(sqlDB *sql.DB, v *vfs.Service, t *transfer.Service, box *crypto.Box, region, domain string, maxObject int64, log *slog.Logger) *Service {
-	return &Service{q: sqlcgen.New(sqlDB), vfs: v, transfer: t, box: box, region: region, domain: strings.ToLower(domain), maxObject: maxObject, log: log, now: time.Now}
+	return &Service{db: sqlDB, q: sqlcgen.New(sqlDB), vfs: v, transfer: t, box: box, region: region, domain: strings.ToLower(domain), maxObject: maxObject, log: log, now: time.Now}
 }
 
 // Domain es el dominio del estilo virtual-host, o vacío.
@@ -204,27 +206,36 @@ func (s *Service) toBucket(ctx context.Context, r sqlcgen.S3Bucket) (Bucket, err
 
 // ---- Llaves ------------------------------------------------------------------
 
-// CreateKey genera una llave. bucketIDs limita una llave de objetos a esos buckets.
-func (s *Service) CreateKey(ctx context.Context, userID int64, name, perm string, bucketIDs []int64) (NewKey, error) {
+// checkKey valida nombre, permiso y buckets de una llave; devuelve el nombre limpio.
+func (s *Service) checkKey(ctx context.Context, name, perm string, bucketIDs []int64) (string, error) {
 	switch perm {
 	case PermAdminRW, PermAdminRO:
 		if len(bucketIDs) > 0 {
-			return NewKey{}, ErrScope
+			return "", ErrScope
 		}
 	case PermObjectRW, PermObjectRO:
 	default:
-		return NewKey{}, ErrPermission
+		return "", ErrPermission
 	}
 	name = strings.TrimSpace(name)
 	if name == "" || len(name) > 80 {
-		return NewKey{}, ErrKeyName
+		return "", ErrKeyName
 	}
 	for _, id := range bucketIDs {
 		if _, err := s.q.GetBucket(ctx, id); errors.Is(err, sql.ErrNoRows) {
-			return NewKey{}, ErrBucketNotFound
+			return "", ErrBucketNotFound
 		} else if err != nil {
-			return NewKey{}, err
+			return "", err
 		}
+	}
+	return name, nil
+}
+
+// CreateKey genera una llave. bucketIDs limita una llave de objetos a esos buckets.
+func (s *Service) CreateKey(ctx context.Context, userID int64, name, perm string, bucketIDs []int64) (NewKey, error) {
+	name, err := s.checkKey(ctx, name, perm, bucketIDs)
+	if err != nil {
+		return NewKey{}, err
 	}
 	// Como R2: 32 caracteres hex de id y 64 de secreto.
 	id := make([]byte, 16)
@@ -247,6 +258,48 @@ func (s *Service) CreateKey(ctx context.Context, userID int64, name, perm string
 		}
 	}
 	return s.withSecret(ctx, row.ID, secretHex)
+}
+
+// UpdateKey cambia el nombre, el permiso y los buckets de una llave. El id de
+// acceso y el secreto siguen igual, así que los clientes ya configurados pasan
+// a tener los permisos nuevos en su siguiente petición.
+func (s *Service) UpdateKey(ctx context.Context, id int64, name, perm string, bucketIDs []int64) (Key, error) {
+	name, err := s.checkKey(ctx, name, perm, bucketIDs)
+	if err != nil {
+		return Key{}, err
+	}
+	// En una transacción: a medias, una llave sin buckets valdría para todos.
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Key{}, err
+	}
+	defer tx.Rollback()
+	q := s.q.WithTx(tx)
+	n, err := q.UpdateKey(ctx, sqlcgen.UpdateKeyParams{Name: name, Permission: perm, ID: id})
+	if err != nil {
+		return Key{}, err
+	}
+	if n == 0 {
+		return Key{}, ErrKeyNotFound
+	}
+	if err := q.ClearKeyBuckets(ctx, id); err != nil {
+		return Key{}, err
+	}
+	seen := map[int64]bool{}
+	for _, b := range bucketIDs {
+		if seen[b] {
+			continue
+		}
+		seen[b] = true
+		if err := q.AddKeyBucket(ctx, sqlcgen.AddKeyBucketParams{KeyID: id, BucketID: b}); err != nil {
+			return Key{}, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return Key{}, err
+	}
+	k, err := s.withSecret(ctx, id, "")
+	return k.Key, err
 }
 
 // RegenerateKey cambia el secreto de una llave y conserva su id de acceso,
@@ -308,7 +361,7 @@ func (s *Service) ListKeys(ctx context.Context) ([]Key, error) {
 	out := make([]Key, 0, len(rows))
 	for _, r := range rows {
 		k := Key{
-			ID: r.ID, AccessKeyID: r.AccessKeyID, Name: r.Name, Permission: r.Permission, Buckets: []string{},
+			ID: r.ID, AccessKeyID: r.AccessKeyID, Name: r.Name, Permission: r.Permission, Buckets: []string{}, BucketIDs: []int64{},
 			CreatedAt: r.CreatedAt, CreatedByEmail: r.CreatedByEmail, LastUsedAt: r.LastUsedAt,
 		}
 		ids, err := s.q.ListKeyBuckets(ctx, r.ID)
@@ -318,6 +371,7 @@ func (s *Service) ListKeys(ctx context.Context) ([]Key, error) {
 		for _, id := range ids {
 			k.Buckets = append(k.Buckets, names[id])
 		}
+		k.BucketIDs = ids
 		sort.Strings(k.Buckets)
 		out = append(out, k)
 	}

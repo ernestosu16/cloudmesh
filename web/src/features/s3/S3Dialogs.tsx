@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from 'cn'
 import { Check, Copy, FolderOpen, TriangleAlert } from 'lucide-react'
-import { createBucket, createS3Key, folderQuery, type Bucket, type NewS3Key, type S3Permission } from '@/lib/api'
+import { createBucket, createS3Key, folderQuery, updateS3Key, type Bucket, type NewS3Key, type S3Key, type S3Permission } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -197,30 +197,45 @@ force_path_style = true`}</pre>
   )
 }
 
+/**
+ * Crea una llave o, con editing, cambia su nombre, permisos y buckets (el
+ * Access Key ID y el secreto no cambian). Para editar, montarlo con la llave:
+ * el formulario arranca con sus valores.
+ */
 export function CreateKeyDialog({
   open,
   onClose,
   buckets,
   endpoint,
   region,
+  editing,
 }: {
   open: boolean
   onClose: () => void
   buckets: Bucket[]
   endpoint: string
   region: string
+  editing?: S3Key
 }) {
   const queryClient = useQueryClient()
-  const [name, setName] = useState('')
-  const [perm, setPerm] = useState<S3Permission>('object_rw')
-  const [scoped, setScoped] = useState(false)
-  const [picked, setPicked] = useState<number[]>([])
+  const [name, setName] = useState(editing?.name ?? '')
+  const [perm, setPerm] = useState<S3Permission>(editing?.permission ?? 'object_rw')
+  const [scoped, setScoped] = useState((editing?.bucket_ids.length ?? 0) > 0)
+  const [picked, setPicked] = useState<number[]>(editing?.bucket_ids ?? [])
   const [created, setCreated] = useState<NewS3Key | null>(null)
   const create = useMutation({
-    mutationFn: () => createS3Key(name, perm, perm.startsWith('object') && scoped ? picked : []),
-    onSuccess: (k) => {
-      setCreated(k)
-      void queryClient.invalidateQueries({ queryKey: ['s3', 'keys'] })
+    mutationFn: async () => {
+      const ids = perm.startsWith('object') && scoped ? picked : []
+      if (editing) {
+        await updateS3Key(editing.id, name, perm, ids)
+        return null
+      }
+      return createS3Key(name, perm, ids)
+    },
+    onSuccess: async (k) => {
+      await queryClient.invalidateQueries({ queryKey: ['s3', 'keys'] })
+      if (k) setCreated(k)
+      else close()
     },
   })
   const close = () => {
@@ -247,8 +262,12 @@ export function CreateKeyDialog({
         ) : (
           <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4">
             <DialogHeader>
-              <DialogTitle>{t('Crear llave de acceso')}</DialogTitle>
-              <DialogDescription>{t('Para aws-cli, rclone, restic o cualquier SDK de S3.')}</DialogDescription>
+              <DialogTitle>{editing ? t('Editar llave de acceso') : t('Crear llave de acceso')}</DialogTitle>
+              <DialogDescription>
+                {editing
+                  ? t('Los clientes que ya usan esta llave siguen conectados y tienen los permisos nuevos desde su siguiente petición.')
+                  : t('Para aws-cli, rclone, restic o cualquier SDK de S3.')}
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-1.5">
               <Label htmlFor="key-name">{t('Nombre')}</Label>
@@ -305,7 +324,7 @@ export function CreateKeyDialog({
                 {t('Cancelar')}
               </Button>
               <Button type="submit" disabled={!valid || create.isPending}>
-                {t('Crear llave')}
+                {editing ? t('Guardar') : t('Crear llave')}
               </Button>
             </div>
           </form>

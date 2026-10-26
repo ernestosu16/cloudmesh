@@ -45,6 +45,12 @@ ORDER BY k.created_at DESC, k.id DESC;
 -- name: DeleteKey :execrows
 DELETE FROM s3_keys WHERE id = ?;
 
+-- name: UpdateKey :execrows
+UPDATE s3_keys SET name = ?, permission = ? WHERE id = ?;
+
+-- name: ClearKeyBuckets :exec
+DELETE FROM s3_key_buckets WHERE key_id = ?;
+
 -- name: SetKeySecret :execrows
 UPDATE s3_keys SET enc_secret = ? WHERE id = ?;
 

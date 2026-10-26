@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
-import { Boxes, FolderOpen, KeyRound, Plus, RefreshCw, Settings2, Trash2, TriangleAlert } from 'lucide-react'
+import { Boxes, FolderOpen, KeyRound, Pencil, Plus, RefreshCw, Settings2, Trash2, TriangleAlert } from 'lucide-react'
 import { bucketsQuery, deleteS3Key, regenerateS3Key, s3InfoQuery, s3KeysQuery, unlinkBucket, type Bucket, type NewS3Key, type S3Key } from '@/lib/api'
 import { relativeTime, shortDate } from '@/lib/format'
 import { Button } from '@/components/ui/button'
@@ -44,6 +44,7 @@ function S3Page() {
   const [configuring, setConfiguring] = useState<Bucket | null>(null)
   const [revoking, setRevoking] = useState<S3Key | null>(null)
   const [regenerating, setRegenerating] = useState<S3Key | null>(null)
+  const [editingKey, setEditingKey] = useState<S3Key | null>(null)
   const [regenerated, setRegenerated] = useState<NewS3Key | null>(null)
 
   // Sin CLOUDMESH_S3_URL se supone el mismo host en el puerto 9000.
@@ -166,24 +167,26 @@ function S3Page() {
             <ul className="grid gap-2.5 md:hidden">
               {keys.map((k) => (
                 <li key={k.id} className="grid gap-2 rounded-2xl border bg-card p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="grid min-w-0">
-                      <span className="truncate font-semibold">{k.name}</span>
-                      <span className="truncate font-mono text-xs text-muted-foreground">{k.access_key_id}</span>
-                    </span>
-                    <div className="flex shrink-0 gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setRegenerating(k)}>
-                        <RefreshCw /> {t('Regenerar')}
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setRevoking(k)}>
-                        {t('Revocar')}
-                      </Button>
-                    </div>
-                  </div>
+                  <span className="grid min-w-0">
+                    <span className="truncate font-semibold">{k.name}</span>
+                    <span className="truncate font-mono text-xs text-muted-foreground">{k.access_key_id}</span>
+                  </span>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <Tag>{permissionLabel(k.permission)}</Tag>
                     <span className="min-w-0 font-mono break-all">{k.buckets.length ? k.buckets.join(', ') : t('todos los buckets')}</span>
                     <span>· {k.last_used_at ? t('usada {cuando}', { cuando: relativeTime(k.last_used_at) }) : t('sin usar')}</span>
+                  </div>
+                  {/* Acciones en su fila: al lado del nombre lo dejaban sin sitio. */}
+                  <div className="-mx-2 -mb-1 flex flex-wrap gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => setEditingKey(k)}>
+                      <Pencil /> {t('Editar')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setRegenerating(k)}>
+                      <RefreshCw /> {t('Regenerar')}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="ml-auto text-destructive hover:text-destructive" onClick={() => setRevoking(k)}>
+                      {t('Revocar')}
+                    </Button>
                   </div>
                 </li>
               ))}
@@ -216,6 +219,9 @@ function S3Page() {
                       <td className="px-3 py-3 font-mono text-[13px] text-secondary-foreground">{k.buckets.length ? k.buckets.join(', ') : t('Todos')}</td>
                       <td className="px-3 py-3 text-secondary-foreground">{k.last_used_at ? relativeTime(k.last_used_at) : t('Nunca')}</td>
                       <td className="px-5 py-2 text-right whitespace-nowrap">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingKey(k)}>
+                          <Pencil /> {t('Editar')}
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => setRegenerating(k)}>
                           <RefreshCw /> {t('Regenerar')}
                         </Button>
@@ -236,6 +242,9 @@ function S3Page() {
       <CreateBucketDialog open={creatingBucket} onClose={() => setCreatingBucket(false)} />
       <BucketSettingsDialog bucket={configuring} endpoint={endpoint} domain={info.domain} onClose={() => setConfiguring(null)} />
       <CreateKeyDialog open={creatingKey} onClose={() => setCreatingKey(false)} buckets={buckets} endpoint={endpoint} region={info.region} />
+      {editingKey && (
+        <CreateKeyDialog open editing={editingKey} onClose={() => setEditingKey(null)} buckets={buckets} endpoint={endpoint} region={info.region} />
+      )}
 
       <AlertDialog open={unlinking !== null} onOpenChange={(o) => !o && setUnlinking(null)}>
         <AlertDialogContent>

@@ -102,6 +102,29 @@ func (s *Server) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, k)
 }
 
+// handleUpdateKey: PATCH /api/s3/keys/{id} {name, permission, bucket_ids} — sin secreto.
+func (s *Server) handleUpdateKey(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Name       string  `json:"name"`
+		Permission string  `json:"permission"`
+		BucketIDs  []int64 `json:"bucket_ids"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	k, err := s.s3.UpdateKey(r.Context(), id, req.Name, req.Permission, req.BucketIDs)
+	if err != nil {
+		s.s3Error(w, "editar llave", err)
+		return
+	}
+	s.log.Info("llave S3 editada", "access_key_id", k.AccessKeyID, "permission", k.Permission, "buckets", k.Buckets, "by", userFrom(r.Context()).Email)
+	writeJSON(w, http.StatusOK, k)
+}
+
 // handleRegenerateKey: POST /api/s3/keys/{id}/regenerate — nuevo secreto; el anterior deja de valer.
 func (s *Server) handleRegenerateKey(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(w, r)

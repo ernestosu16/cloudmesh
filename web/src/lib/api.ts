@@ -663,6 +663,7 @@ export interface S3Key {
   permission: S3Permission
   /** Vacío: todos los buckets. */
   buckets: string[]
+  bucket_ids: number[]
   created_at: number
   created_by_email?: string
   last_used_at: number
@@ -699,6 +700,10 @@ export const unlinkBucket = (id: number) => api<void>(`/s3/buckets/${id}`, { met
 
 export const createS3Key = (name: string, permission: S3Permission, bucket_ids: number[]) =>
   api<NewS3Key>('/s3/keys', { method: 'POST', body: JSON.stringify({ name, permission, bucket_ids }) })
+
+/** Cambia nombre, permisos y buckets; el Access Key ID y el secreto siguen igual. */
+export const updateS3Key = (id: number, name: string, permission: S3Permission, bucket_ids: number[]) =>
+  api<S3Key>(`/s3/keys/${id}`, { method: 'PATCH', body: JSON.stringify({ name, permission, bucket_ids }) })
 
 /** Nuevo secreto para la llave; el anterior deja de valer. */
 export const regenerateS3Key = (id: number) => api<NewS3Key>(`/s3/keys/${id}/regenerate`, { method: 'POST' })

@@ -385,6 +385,7 @@ func TestPermissions(t *testing.T) {
 	expect(t, admin.do("PUT", "/dos", nil, nil), 200, "bucket dos")
 	expect(t, admin.do("PUT", "/uno/k", []byte("v"), nil), 200, "put")
 	uno := mustBucket(t, e, "uno")
+	dos := mustBucket(t, e, "dos")
 
 	ro := e.client(t, PermObjectRO)
 	expect(t, ro.do("GET", "/uno/k", nil, nil), 200, "object_ro lee")
@@ -428,6 +429,39 @@ func TestPermissions(t *testing.T) {
 	}
 	if _, err := e.s.RegenerateKey(context.Background(), 9999); !errors.Is(err, ErrKeyNotFound) {
 		t.Fatalf("regenerar llave inexistente: %v", err)
+	}
+	// Editar: mismo id y secreto, permisos nuevos al momento.
+	ctx := context.Background()
+	for _, k := range keys {
+		if k.AccessKeyID != scoped.ak {
+			continue
+		}
+		if _, err := e.s.UpdateKey(ctx, k.ID, "x", PermAdminRW, []int64{uno.ID}); !errors.Is(err, ErrScope) {
+			t.Fatalf("editar a admin con buckets: %v", err)
+		}
+		if _, err := e.s.UpdateKey(ctx, k.ID, " ", PermObjectRW, nil); !errors.Is(err, ErrKeyName) {
+			t.Fatalf("editar sin nombre: %v", err)
+		}
+		ek, err := e.s.UpdateKey(ctx, k.ID, " solo dos ", PermObjectRO, []int64{dos.ID, dos.ID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ek.Name != "solo dos" || ek.Permission != PermObjectRO || len(ek.BucketIDs) != 1 || ek.Buckets[0] != "dos" || ek.AccessKeyID != scoped.ak {
+			t.Fatalf("llave editada = %+v", ek)
+		}
+		expect(t, scoped.do("GET", "/uno/k2", nil, nil), 403, "ya no entra en uno")
+		expect(t, scoped.do("PUT", "/dos/k3", []byte("x"), nil), 403, "ahora es de solo lectura")
+		expect(t, scoped.do("GET", "/dos/k2", nil, nil), 404, "lee en dos")
+		if ek, err = e.s.UpdateKey(ctx, k.ID, "admin", PermAdminRW, nil); err != nil || len(ek.Buckets) != 0 {
+			t.Fatalf("a admin: %+v %v", ek, err)
+		}
+		expect(t, scoped.do("PUT", "/tres", nil, nil), 200, "admin crea buckets")
+	}
+	if _, err := e.s.UpdateKey(ctx, 9999, "x", PermObjectRW, nil); !errors.Is(err, ErrKeyNotFound) {
+		t.Fatalf("editar llave inexistente: %v", err)
+	}
+	if _, err := e.s.UpdateKey(ctx, keys[0].ID, "x", PermObjectRW, []int64{9999}); !errors.Is(err, ErrBucketNotFound) {
+		t.Fatalf("editar con bucket inexistente: %v", err)
 	}
 	// Revocar
 	for _, k := range keys {

@@ -166,6 +166,7 @@ func New(d Deps) http.Handler {
 	api.HandleFunc("DELETE /api/s3/buckets/{id}", s.role(auth.RoleAdmin, s.handleUnlinkBucket))
 	api.HandleFunc("GET /api/s3/keys", s.role(auth.RoleAdmin, s.handleListKeys))
 	api.HandleFunc("POST /api/s3/keys", s.role(auth.RoleAdmin, s.handleCreateKey))
+	api.HandleFunc("PATCH /api/s3/keys/{id}", s.role(auth.RoleAdmin, s.handleUpdateKey))
 	api.HandleFunc("POST /api/s3/keys/{id}/regenerate", s.role(auth.RoleAdmin, s.handleRegenerateKey))
 	api.HandleFunc("DELETE /api/s3/keys/{id}", s.role(auth.RoleAdmin, s.handleDeleteKey))
 	api.HandleFunc("GET /api/settings", s.handleGetSettings)

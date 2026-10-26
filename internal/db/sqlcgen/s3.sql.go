@@ -23,6 +23,15 @@ func (q *Queries) AddKeyBucket(ctx context.Context, arg AddKeyBucketParams) erro
 	return err
 }
 
+const clearKeyBuckets = `-- name: ClearKeyBuckets :exec
+DELETE FROM s3_key_buckets WHERE key_id = ?
+`
+
+func (q *Queries) ClearKeyBuckets(ctx context.Context, keyID int64) error {
+	_, err := q.db.ExecContext(ctx, clearKeyBuckets, keyID)
+	return err
+}
+
 const countBucketUploads = `-- name: CountBucketUploads :one
 SELECT COUNT(*) FROM s3_uploads WHERE bucket_id = ?
 `
@@ -771,4 +780,22 @@ type TouchKeyParams struct {
 func (q *Queries) TouchKey(ctx context.Context, arg TouchKeyParams) error {
 	_, err := q.db.ExecContext(ctx, touchKey, arg.LastUsedAt, arg.ID, arg.LastUsedAt_2)
 	return err
+}
+
+const updateKey = `-- name: UpdateKey :execrows
+UPDATE s3_keys SET name = ?, permission = ? WHERE id = ?
+`
+
+type UpdateKeyParams struct {
+	Name       string `json:"name"`
+	Permission string `json:"permission"`
+	ID         int64  `json:"id"`
+}
+
+func (q *Queries) UpdateKey(ctx context.Context, arg UpdateKeyParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateKey, arg.Name, arg.Permission, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
